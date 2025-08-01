@@ -76,4 +76,4 @@ The app detects previously submitted documents and displays them as ✅ submitte
 
 ## 📄 License
 
-MIT
+MIT 
