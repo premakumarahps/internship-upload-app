@@ -32,7 +32,19 @@ This web app was developed to streamline the submission of internship-related do
 | index.html | Frontend UI + JavaScript (user interaction, upload, feedback) |
 
 
+## 📸 Screenshot
 
+![Initial Interface](demo1.png)
+The user is presented with a clean, mobile-responsive interface to begin the document upload process by entering their index number.
+
+![Index Verification in Progress](demo2.png)
+A loading animation is displayed after the user submits their index number, indicating background verification of student and company data from the spreadsheet.
+
+![Upload Panel with Full Fields](demo3.png)
+After successful verification, the student's assigned company is shown along with dynamic file upload fields. Already uploaded documents are displayed, and missing ones are enabled for submission.
+
+![Partially Completed Uploads](demo4.png)
+The app detects previously submitted documents and displays them as ✅ submitted, while only showing remaining file inputs. The student can upload the pending documents without re-submitting existing ones.
 
 ## 💡 How it Works
 
