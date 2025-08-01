@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Industrial Training Upload</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: 'Segoe UI', sans-serif;
+        background: #f0f4f8;
+        margin: 0;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .container {
+        max-width: 600px;
+        background: white;
+        padding: 30px;
+        margin: auto;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+      }
+
+      h2 {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      input[type="text"] {
+        padding: 12px;
+        width: 70%;
+        font-size: 16px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+
+      button {
+        padding: 12px 20px;
+        font-size: 15px;
+        border: none;
+        background-color: #007bff;
+        color: white;
+        cursor: pointer;
+        border-radius: 6px;
+        margin-top: 10px;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      .upload-group {
+        text-align: left;
+        margin: 15px 0;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: bold;
+        color: #444;
+      }
+
+      input[type="file"] {
+        width: 100%;
+        padding: 8px;
+      }
+
+      #loader {
+        margin: 20px auto;
+        border: 6px solid #f3f3f3;
+        border-top: 6px solid #007bff;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        display: none;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      #companyDisplay {
+        margin-top: 15px;
+        font-size: 18px;
+        font-weight: 500;
+      }
+
+      #progressContainer {
+        display: none;
+        margin-top: 20px;
+      }
+
+      #progressBarWrapper {
+        width: 100%;
+        max-width: 400px;
+        height: 25px;
+        background-color: #ddd;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: auto;
+      }
+
+      #progressBar {
+        height: 100%;
+        width: 0%;
+        background-color: #28a745;
+        transition: width 0.3s ease-in-out;
+      }
+
+      #progressText {
+        margin-top: 8px;
+        font-weight: bold;
+      }
+
+      #successMsg {
+        margin-top: 20px;
+        color: green;
+        font-weight: bold;
+        opacity: 0;
+        transition: opacity 1.5s ease-in-out;
+      }
+
+      @media (max-width: 600px) {
+        input[type="text"] {
+          width: 90%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Upload Internship Documents</h2>
+      <input type="text" id="indexInput" placeholder="Enter your index number" />
+      <button onclick="checkIndex()">Check</button>
+      <div id="loader"></div>
+      <div id="companyDisplay"></div>
+
+      <form id="uploadForm" style="display:none;" onsubmit="handleSubmit(event)">
+        <div id="uploadFields"></div>
+        <button type="submit" id="uploadBtn">Upload</button>
+
+        <div id="progressContainer">
+          <div id="progressBarWrapper">
+            <div id="progressBar"></div>
+          </div>
+          <p id="progressText">0%</p>
+        </div>
+      </form>
+
+      <div id="successMsg"></div>
+    </div>
+
+    <script>
+      const fileTypes = {
+        finalPresentation: "Final Presentation",
+        finalReport: "Final Report",
+        week1: "1st 6th Week Report",
+        week2: "2nd 6th Week Report",
+        week3: "3rd 6th Week Report",
+        week4: "4th 6th Week Report",
+        internDiary: "Intern Diary (If available)"
+      };
+
+      let state = {
+        index: "",
+        company: "",
+        multipleStudents: false,
+        remaining: [],
+        uploaded: []
+      };
+
+      function checkIndex() {
+        const index = document.getElementById("indexInput").value.trim();
+        if (!index) return alert("Please enter your index.");
+
+        resetUI();
+        document.getElementById("loader").style.display = "block";
+
+        google.script.run.withSuccessHandler(result => {
+          document.getElementById("loader").style.display = "none";
+
+          if (result.status === "NOT_FOUND") {
+            document.getElementById("companyDisplay").innerText = "❌ Invalid index.";
+            return;
+          }
+
+          state = {
+            index,
+            company: result.company,
+            multipleStudents: result.multipleStudents,
+            remaining: result.remaining || [],
+            uploaded: result.uploaded || []
+          };
+
+          if (result.status === "ALREADY_SUBMITTED") {
+            document.getElementById("companyDisplay").innerText = `✅ All required files you have already submitted!`;
+            return;
+          }
+
+          let display = `<div>Industrial Training Company: <b>${result.company}</b></div>`;
+          if (result.uploaded.length > 0) {
+            display += `<div style="text-align:left; margin-top:15px;">✅ Already submitted:</div><ul style="text-align:left;">`;
+            result.uploaded.forEach(k => display += `<li>${fileTypes[k] || k}</li>`);
+            display += `</ul>`;
+          }
+          document.getElementById("companyDisplay").innerHTML = display;
+
+          renderUploadFields();
+          document.getElementById("uploadForm").style.display = "block";
+        }).checkIndex(index);
+      }
+
+      function renderUploadFields() {
+        const fieldArea = document.getElementById("uploadFields");
+        fieldArea.innerHTML = "";
+        state.remaining.forEach(key => {
+          const group = document.createElement("div");
+          group.className = "upload-group";
+
+          const label = document.createElement("label");
+          label.innerText = fileTypes[key] || key;
+
+          const input = document.createElement("input");
+          input.type = "file";
+          input.name = key;
+
+          group.appendChild(label);
+          group.appendChild(input);
+          fieldArea.appendChild(group);
+        });
+      }
+
+      function handleSubmit(event) {
+        event.preventDefault();
+
+        const form = document.getElementById("uploadForm");
+        const inputs = form.querySelectorAll("input[type='file']");
+        const files = {};
+        let requiredCount = 0, selectedRequired = 0;
+
+        for (let input of inputs) {
+          const file = input.files[0];
+          const key = input.name;
+          if (key !== "internDiary") requiredCount++;
+          if (file && key !== "internDiary") selectedRequired++;
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+              files[key] = {
+                fileName: file.name,
+                mimeType: file.type,
+                content: e.target.result.split(",")[1]
+              };
+              if (Object.keys(files).length === inputs.length) startUpload(files);
+            };
+            reader.readAsDataURL(file);
+          } else {
+            files[key] = null;
+          }
+        }
+
+        if (selectedRequired === 0) return alert("Upload at least one required file.");
+      }
+
+      function startUpload(files) {
+        document.getElementById("uploadBtn").disabled = true;
+        document.getElementById("progressContainer").style.display = "block";
+
+        let percent = 0;
+        const interval = setInterval(() => {
+          if (percent < 90) {
+            percent += 10;
+            updateProgress(percent);
+          } else {
+            clearInterval(interval);
+          }
+        }, 200);
+
+        google.script.run.withSuccessHandler(() => {
+          updateProgress(100);
+          setTimeout(() => {
+            document.getElementById("successMsg").innerText = "✅ Files uploaded successfully!";
+            document.getElementById("successMsg").style.opacity = 1;
+            setTimeout(() => resetUI(true), 3000);
+          }, 500);
+        }).uploadMultipleFiles({
+          index: state.index,
+          company: state.company,
+          multipleStudents: state.multipleStudents,
+          files
+        });
+      }
+
+      function updateProgress(percent) {
+        document.getElementById("progressBar").style.width = percent + "%";
+        document.getElementById("progressText").innerText = percent + "%";
+      }
+
+      function resetUI(clearInput = false) {
+        if (clearInput) {
+          document.getElementById("indexInput").value = "";
+        }
+
+        state = {
+          index: "",
+          company: "",
+          multipleStudents: false,
+          remaining: [],
+          uploaded: []
+        };
+
+        document.getElementById("companyDisplay").innerText = "";
+        document.getElementById("uploadForm").style.display = "none";
+        document.getElementById("uploadFields").innerHTML = "";  // clear file input fields
+        document.getElementById("uploadBtn").disabled = false;
+
+        document.getElementById("progressContainer").style.display = "none";
+        document.getElementById("progressBar").style.width = "0%";
+        document.getElementById("progressText").innerText = "0%";
+
+        document.getElementById("successMsg").innerText = "";
+        document.getElementById("successMsg").style.opacity = 0;
+      }
+    </script>
+  </body>
+</html>
